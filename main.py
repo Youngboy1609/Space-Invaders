@@ -1,75 +1,111 @@
-import pygame,sys
+import pygame, sys
 from player import Player
 import obstacle
-from alien import Alien,Extra
-from random import choice,randint
+from alien import Alien, Extra
+from random import choice, randint
 from laser import Laser
 
 class Game:
-    def __init__(self) :
-        #Player setup
-        player_sprite = Player((screen_width /2, screen_height),screen_width,5)
+    def __init__(self):
+        """
+        Initialize the game by setting up the player, obstacles, aliens, score, lives, and sounds.
+        """
+        # Player setup
+        player_sprite = Player((screen_width / 2, screen_height), screen_width, 5)
         self.player = pygame.sprite.GroupSingle(player_sprite)
 
-        #health and score setup
+        # Health and score setup
         self.lives = 3
         self.live_surf = pygame.image.load('graphics\\spaceship.png').convert_alpha()
-        self.live_x_start_pos = screen_width - (self.live_surf.get_size()[0]*2 + 20)
+        self.live_x_start_pos = screen_width - (self.live_surf.get_size()[0] * 2 + 20)
         self.score = 0
-        self.font = pygame.font.Font('font\\Pixeled.ttf',20)
+        self.font = pygame.font.Font('font\\Pixeled.ttf', 20)
 
-        #Obstacle setup
+        # Obstacle setup
         self.shape = obstacle.shape
         self.block_size = 6
         self.blocks = pygame.sprite.Group()
         self.obstacle_amount = 4
-        self.obstacle_x_positions = [num*(screen_width/self.obstacle_amount) for num in range(self.obstacle_amount)]
-        self.create_multiple_obstacles(*self.obstacle_x_positions,x_start=screen_width/15,y_start=480)
+        self.obstacle_x_positions = [num * (screen_width / self.obstacle_amount) for num in range(self.obstacle_amount)]
+        self.create_multiple_obstacles(*self.obstacle_x_positions, x_start=screen_width / 15, y_start=480)
 
-        #Alien setup
+        # Alien setup
         self.aliens = pygame.sprite.Group()
         self.alien_lasers = pygame.sprite.Group()
-        self.alien_setup(rows=6,cols=8)
+        self.alien_setup(rows=6, cols=8)
         self.alien_direction = 1
 
-        #Extra setup
+        # Extra setup
         self.extra = pygame.sprite.GroupSingle()
-        self.extra_spawn_time = randint(40,80)
+        self.extra_spawn_time = randint(40, 80)
 
-        #Audio
+        # Audio
         music = pygame.mixer.Sound('audio\\nolimits.mp3')
-        music.set_volume(0.2)
-        music.play(loops= -1)
+        music.set_volume(0.5)
+        music.play(loops=-1)
         self.lasers_sound = pygame.mixer.Sound('audio\\laser.wav')
         self.lasers_sound.set_volume(0.5)
         self.explosion_sound = pygame.mixer.Sound('audio\\explosion.wav')
         self.explosion_sound.set_volume(0.3)
 
-    def create_obstacle(self, x_start, y_start,offset_x):
-        for row_index,row in enumerate(self.shape):
-            for col_index,col in enumerate(row):
+    def create_obstacle(self, x_start, y_start, offset_x):
+        """
+        Create a single obstacle.
+
+        Args:
+            x_start (int): The x-coordinate to start creating the obstacle.
+            y_start (int): The y-coordinate to start creating the obstacle.
+            offset_x (int): The horizontal offset for creating multiple obstacles.
+        """
+        for row_index, row in enumerate(self.shape):
+            for col_index, col in enumerate(row):
                 if col == 'x':
-                    x = x_start+col_index*self.block_size+offset_x
-                    y = y_start+row_index*self.block_size
-                    block=obstacle.Block(self.block_size,(241,79,80),x,y)
+                    x = x_start + col_index * self.block_size + offset_x
+                    y = y_start + row_index * self.block_size
+                    block = obstacle.Block(self.block_size, (241, 79, 80), x, y)
                     self.blocks.add(block)
 
     def create_multiple_obstacles(self, *offset, x_start, y_start):
-        for offset_x in offset:
-            self.create_obstacle(x_start,y_start,offset_x)
+        """
+        Create multiple obstacles at specified positions.
 
-    def alien_setup(self, rows, cols, x_distance = 60, y_distance = 48, x_offset = 70, y_offset = 100):
+        Args:
+            *offset (tuple): The offsets for each obstacle.
+            x_start (int): The x-coordinate to start creating the obstacles.
+            y_start (int): The y-coordinate to start creating the obstacles.
+        """
+        for offset_x in offset:
+            self.create_obstacle(x_start, y_start, offset_x)
+
+    def alien_setup(self, rows, cols, x_distance=60, y_distance=48, x_offset=70, y_offset=100):
+        """
+        Set up aliens in rows and columns.
+
+        Args:
+            rows (int): Number of rows of aliens.
+            cols (int): Number of columns of aliens.
+            x_distance (int): Horizontal distance between aliens.
+            y_distance (int): Vertical distance between aliens.
+            x_offset (int): Horizontal offset for the alien grid.
+            y_offset (int): Vertical offset for the alien grid.
+        """
         for row_index, row in enumerate(range(rows)):
             for col_index, col in enumerate(range(cols)):
-                x=col_index * x_distance+ x_offset
-                y=row_index * y_distance + y_offset
-                
-                if row_index ==0: alien_sprite = Alien('yellow',x,y)
-                elif 1<= row_index<=2: alien_sprite = Alien('green',x,y)
-                else: alien_sprite = Alien('red',x,y)
+                x = col_index * x_distance + x_offset
+                y = row_index * y_distance + y_offset
+
+                if row_index == 0:
+                    alien_sprite = Alien('yellow', x, y)
+                elif 1 <= row_index <= 2:
+                    alien_sprite = Alien('green', x, y)
+                else:
+                    alien_sprite = Alien('red', x, y)
                 self.aliens.add(alien_sprite)
 
     def alien_position_checker(self):
+        """
+        Check the positions of the aliens and change their direction if they reach the screen edges.
+        """
         all_aliens = self.aliens.sprites()
         for alien in all_aliens:
             if alien.rect.right >= screen_width:
@@ -80,11 +116,20 @@ class Game:
                 self.alien_move_down(2)
 
     def alien_move_down(self, distance):
+        """
+        Move all aliens down by a specified distance.
+
+        Args:
+            distance (int): The distance to move the aliens down.
+        """
         if self.aliens:
             for alien in self.aliens.sprites():
                 alien.rect.y += distance
 
     def alien_shoot(self):
+        """
+        Make a random alien shoot a laser.
+        """
         if self.aliens.sprites():
             random_alien = choice(self.aliens.sprites())
             laser_sprite = Laser(random_alien.rect.center, 6, screen_height)
@@ -92,82 +137,99 @@ class Game:
             self.lasers_sound.play()
 
     def extra_alien_timer(self):
+        """
+        Handle the timer for spawning extra aliens.
+        """
         self.extra_spawn_time -= 1
         if self.extra_spawn_time <= 0:
-            self.extra.add(Extra(choice(['right','left']),screen_width))
-            self.extra_spawn_time = randint(400,800)
+            self.extra.add(Extra(choice(['right', 'left']), screen_width))
+            self.extra_spawn_time = randint(400, 800)
 
     def collisions_checks(self):
-
-        #player lasers
+        """
+        Check for various collisions (player lasers, alien lasers, player, aliens) and handle the outcomes.
+        """
+        # Player lasers
         if self.player.sprite.lasers:
             for laser in self.player.sprite.lasers:
-                #obstacle collisions
+                # Obstacle collisions
                 if pygame.sprite.spritecollide(laser, self.blocks, True):
                     laser.kill()
                     self.explosion_sound.play()
 
-                #alien collisions
+                # Alien collisions
                 aliens_hit = pygame.sprite.spritecollide(laser, self.aliens, True)
                 if aliens_hit:
                     for alien in aliens_hit:
                         self.score += alien.value
-                        laser.kill() 
+                        laser.kill()
 
-                #extra collisions
+                # Extra collisions
                 if pygame.sprite.spritecollide(laser, self.extra, True):
                     self.score += 500
                     laser.kill()
-                    
-        #alien lasers
+
+        # Alien lasers
         if self.alien_lasers:
             for laser in self.alien_lasers:
-            #obstacle collisions
+                # Obstacle collisions
                 if pygame.sprite.spritecollide(laser, self.blocks, True):
                     laser.kill()
-                #player collisions
+                # Player collisions
                 if pygame.sprite.spritecollide(laser, self.player, False):
                     laser.kill()
-                    self.lives -=1
+                    self.lives -= 1
                     if self.lives <= 0:
                         pygame.quit()
                         sys.exit()
 
-        # aliens
+        # Aliens
         if self.aliens:
             for alien in self.aliens:
                 pygame.sprite.spritecollide(alien, self.blocks, True)
-            
+
             if pygame.sprite.spritecollide(alien, self.player, False):
                 pygame.quit()
                 sys.exit()
 
     def display_lives(self):
-        for live in range(self.lives -1):
-            x = self.live_x_start_pos + (live*(self.live_surf.get_size()[0]+10))
-            screen.blit(self.live_surf,(x,8))
+        """
+        Display the remaining lives on the screen.
+        """
+        for live in range(self.lives - 1):
+            x = self.live_x_start_pos + (live * (self.live_surf.get_size()[0] + 10))
+            screen.blit(self.live_surf, (x, 8))
 
     def display_score(self):
-        score_surf = self.font.render(f'score: {self.score}',False,'white')
-        score_rect = score_surf.get_rect(topleft = (10,-10))
+        """
+        Display the current score on the screen.
+        """
+        score_surf = self.font.render(f'score: {self.score}', False, 'white')
+        score_rect = score_surf.get_rect(topleft=(10, -10))
         screen.blit(score_surf, score_rect)
 
     def victory_message(self):
+        """
+        Display a victory message if all aliens are destroyed.
+        """
         if not self.aliens.sprites():
             victory_surf = self.font.render('YOU WON', False, 'white')
-            victory_rect = victory_surf.get_rect(center =(screen_width/2, screen_height/2) )
+            victory_rect = victory_surf.get_rect(center=(screen_width / 2, screen_height / 2))
             screen.blit(victory_surf, victory_rect)
 
     def run(self):
+        """
+        Run the game loop, updating and drawing all elements.
+        """
         self.player.update()
         self.alien_lasers.update()
         self.extra.update()
-        
+
         self.alien_position_checker()
         self.extra_alien_timer()
         self.aliens.update(self.alien_direction)
         self.collisions_checks()
-       
+
         self.player.sprite.lasers.draw(screen)
         self.player.draw(screen)
         self.blocks.draw(screen)
@@ -180,10 +242,16 @@ class Game:
 
 class CRT:
     def __init__(self):
+        """
+        Initialize the CRT screen effect.
+        """
         self.tv = pygame.image.load('graphics\\tv.png').convert_alpha()
         self.tv = pygame.transform.scale(self.tv, (screen_width, screen_height))
-    
+
     def create_crt_lines(self):
+        """
+        Create scan lines for the CRT effect.
+        """
         line_height = 3
         line_amount = int(screen_height / line_height)
         for line in range(line_amount):
@@ -191,22 +259,25 @@ class CRT:
             pygame.draw.line(self.tv, 'black', (0, y_pos), (screen_width, y_pos), 1)
 
     def draw(self):
-        self.tv.set_alpha(randint(75,90))
+        """
+        Draw the CRT effect on the screen.
+        """
+        self.tv.set_alpha(randint(75, 90))
         self.create_crt_lines()
-        screen.blit(self.tv,(0,0))
-        
+        screen.blit(self.tv, (0, 0))
+
 
 if __name__ == '__main__':
     pygame.init()
-    screen_width=600
-    screen_height=600   
-    screen = pygame.display.set_mode((screen_width,screen_height))
+    screen_width = 600
+    screen_height = 600
+    screen = pygame.display.set_mode((screen_width, screen_height))
     clock = pygame.time.Clock()
     game = Game()
     crt = CRT()
 
-    ALIENLASER = pygame.USEREVENT +1
-    pygame.time.set_timer(ALIENLASER,800)
+    ALIENLASER = pygame.USEREVENT + 1
+    pygame.time.set_timer(ALIENLASER, 800)
 
     while True:
         for event in pygame.event.get():
@@ -215,7 +286,7 @@ if __name__ == '__main__':
                 sys.exit()
             if event.type == ALIENLASER:
                 game.alien_shoot()
-        screen.fill((30,30,30))
+        screen.fill((30, 30, 30))
         game.run()
         crt.draw()
 
