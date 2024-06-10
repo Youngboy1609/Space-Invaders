@@ -5,10 +5,11 @@ from alien import Alien, Extra
 from random import choice, randint
 from laser import Laser
 
+
 class Game:
     def __init__(self):
         """
-        Initialize the game by setting up the player, obstacles, aliens, score, lives, and sounds.
+        Initialize the game by setting up the player, obstacles, aliens, score and lives.
         """
         # Player setup
         player_sprite = Player((screen_width / 2, screen_height), screen_width, 5)
@@ -32,7 +33,7 @@ class Game:
         # Alien setup
         self.aliens = pygame.sprite.Group()
         self.alien_lasers = pygame.sprite.Group()
-        self.alien_setup(rows=6, cols=8)
+        self.alien_setup(rows=7, cols=10)
         self.alien_direction = 1
 
         # Extra setup
@@ -40,11 +41,8 @@ class Game:
         self.extra_spawn_time = randint(40, 80)
 
         # Audio
-        music = pygame.mixer.Sound('audio\\nolimits.mp3')
-        music.set_volume(0.5)
-        music.play(loops=-1)
         self.lasers_sound = pygame.mixer.Sound('audio\\laser.wav')
-        self.lasers_sound.set_volume(0.5)
+        self.lasers_sound.set_volume(0.3)
         self.explosion_sound = pygame.mixer.Sound('audio\\explosion.wav')
         self.explosion_sound.set_volume(0.3)
 
@@ -187,11 +185,8 @@ class Game:
         if self.aliens:
             for alien in self.aliens:
                 pygame.sprite.spritecollide(alien, self.blocks, True)
-
-            if pygame.sprite.spritecollide(alien, self.player, False):
-                pygame.quit()
-                sys.exit()
-
+                pygame.sprite.spritecollide(alien, self.player, True)
+            
     def display_lives(self):
         """
         Display the remaining lives on the screen.
@@ -266,18 +261,24 @@ class CRT:
         self.create_crt_lines()
         screen.blit(self.tv, (0, 0))
 
-
+screen_width = 1280
+screen_height = 720
+pygame.display.set_caption("Space Invaders")
+pygame_icon = pygame.image.load('graphics\\spaceship.png')
+pygame.display.set_icon(pygame_icon)
+screen = pygame.display.set_mode((screen_width, screen_height))
 if __name__ == '__main__':
     pygame.init()
-    screen_width = 600
-    screen_height = 600
-    screen = pygame.display.set_mode((screen_width, screen_height))
     clock = pygame.time.Clock()
     game = Game()
     crt = CRT()
 
     ALIENLASER = pygame.USEREVENT + 1
     pygame.time.set_timer(ALIENLASER, 800)
+
+    from loading_screen import Background
+    display_screen = Background()
+    display_screen.play_background()
 
     while True:
         for event in pygame.event.get():
